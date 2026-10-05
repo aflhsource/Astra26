@@ -8,7 +8,6 @@
 const crypto = require('./crypto');
 const provenance = require('./provenance');
 const risk = require('./risk');
-const ai = require('./ai');
 const downtime = require('./downtime');
 
 module.exports = {
@@ -32,12 +31,7 @@ module.exports = {
   RISK_LEVELS: risk.RISK_LEVELS,
   RULES: risk.RULES,
 
-  // Phase 4: AI Security Analysis
-  analyzeSecurityRisk: ai.analyzeSecurityRisk,
-  MockAIAdapter: ai.MockAIAdapter,
-  GeminiAIAdapter: ai.GeminiAIAdapter,
-
-  // Phase 5, 6 & 7: DOWNTIME-PASS & Offline Verification
+  // Phase 4 & 5: DOWNTIME-PASS & Offline Verification
   createSafetyCard: downtime.createSafetyCard,
   verifySafetyCard: downtime.verifySafetyCard,
   verifySafetyCardLocally: downtime.verifySafetyCardLocally,
@@ -48,6 +42,5 @@ module.exports = {
   crypto,
   provenance,
   risk,
-  ai,
   downtime
 };

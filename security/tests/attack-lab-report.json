@@ -1,11 +1,11 @@
 {
   "title": "ASTRA 2026: 90-Point Security Attack Test Lab Audit Report",
-  "timestamp": "2026-10-05T09:13:31.492Z",
+  "timestamp": "2026-10-05T11:19:33.256Z",
   "summary": {
     "total": 90,
-    "passed": 64,
+    "passed": 59,
     "failed": 0,
-    "notApplicable": 14,
+    "notApplicable": 19,
     "documentedLimitation": 12
   },
   "attacks": [
@@ -365,45 +365,45 @@
       "id": "33",
       "name": "AI prompt injection",
       "severity": "P1",
-      "applicable": true,
-      "expected": "Cryptographic result remains authoritative",
-      "actual": "Severity remained CRITICAL",
-      "status": "PASS",
-      "explanation": "Deterministic verifier outputs cannot be overridden by prompt injection text",
-      "mitigation": "Architectural separation of crypto and AI (implemented)"
+      "applicable": false,
+      "expected": "Pure deterministic crypto architecture",
+      "actual": "AI layer omitted from core security engine",
+      "status": "NOT_APPLICABLE",
+      "explanation": "AI module removed for 100% deterministic crypto execution",
+      "mitigation": "Deterministic crypto supremacy"
     },
     {
       "id": "34",
       "name": "AI hallucination",
       "severity": "P1",
-      "applicable": true,
-      "expected": "AI cannot change status to VALID",
-      "actual": "AI output recommendation: Quarantine record",
-      "status": "PASS",
-      "explanation": "Deterministic risk rules lock severity level before calling AI model",
-      "mitigation": "Deterministic severity enforcement (implemented)"
+      "applicable": false,
+      "expected": "Pure deterministic crypto architecture",
+      "actual": "AI layer omitted from core security engine",
+      "status": "NOT_APPLICABLE",
+      "explanation": "AI module removed for 100% deterministic crypto execution",
+      "mitigation": "Deterministic severity enforcement"
     },
     {
       "id": "35",
       "name": "AI data leakage",
       "severity": "P1",
-      "applicable": true,
-      "expected": "No unnecessary PHI or private keys transmitted",
-      "actual": "Verified minimal technical findings sent to AI",
-      "status": "PASS",
-      "explanation": "AI analysis facade filters input to technical findings only",
-      "mitigation": "Data minimization prompt filters (implemented)"
+      "applicable": false,
+      "expected": "Pure deterministic crypto architecture",
+      "actual": "AI layer omitted from core security engine",
+      "status": "NOT_APPLICABLE",
+      "explanation": "AI module removed for 100% deterministic crypto execution",
+      "mitigation": "Data minimization prompt filters"
     },
     {
       "id": "36",
       "name": "AI API key exposure",
       "severity": "P1",
-      "applicable": true,
-      "expected": "No hardcoded API keys",
-      "actual": "No hardcoded API keys found in codebase",
-      "status": "PASS",
-      "explanation": "API keys loaded exclusively from process.env with zero hardcoding",
-      "mitigation": "Environment variable secret loading (implemented)"
+      "applicable": false,
+      "expected": "Pure deterministic crypto architecture",
+      "actual": "AI layer omitted from core security engine",
+      "status": "NOT_APPLICABLE",
+      "explanation": "AI module removed for 100% deterministic crypto execution",
+      "mitigation": "Environment variable secret loading"
     },
     {
       "id": "37",
@@ -543,7 +543,7 @@
       "severity": "P1",
       "applicable": true,
       "expected": "High throughput local processing",
-      "actual": "500 iterations completed in 29ms",
+      "actual": "500 iterations completed in 40ms",
       "status": "PASS",
       "explanation": "Lightweight native crypto operations process hundreds of records per second",
       "mitigation": "Optimized native crypto primitives (implemented)"
@@ -618,12 +618,12 @@
       "id": "56",
       "name": "SSRF",
       "severity": "P2",
-      "applicable": true,
-      "expected": "URL target hardcoded to Google API domain",
-      "actual": "Target domain fixed; user input cannot change host",
-      "status": "PASS",
-      "explanation": "LLM adapter connects strictly to fixed API domain endpoint",
-      "mitigation": "Fixed endpoint destination (implemented)"
+      "applicable": false,
+      "expected": "Zero external HTTP requests",
+      "actual": "AI HTTP adapter removed; zero outbound requests",
+      "status": "NOT_APPLICABLE",
+      "explanation": "Security module contains zero HTTP network connections",
+      "mitigation": "Zero-network architecture"
     },
     {
       "id": "57",

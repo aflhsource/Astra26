@@ -47,9 +47,6 @@ Deterministic Verification Engine
        │
        ▼
 Deterministic Risk Engine (Scores 0–100: LOW, MEDIUM, HIGH, CRITICAL)
-       │
-       ▼
-AI Security Explanation Layer (Explains findings; CANNOT override cryptographic truth)
 
 
 ===================================================================================
@@ -100,7 +97,6 @@ Local Public-Key Cryptographic Verification (No Network, No Backend, No DB)
 2. **Transmission**: The signed envelope travels across clinics, labs, and intermediaries. Transformations can be appended via `appendTransformation()`.
 3. **Verification**: The consumer calls `verifyIntegrity(record, trustedPublicKey)`.
 4. **Risk Scoring**: Findings are passed to `calculateRiskScore(report)`. If authentic: score `0` (`LOW`). If tampered: score `95` (`CRITICAL`).
-5. **AI Explanation**: `analyzeSecurityRisk(findingsInput)` translates findings into direct clinical impact statements and incident response steps.
 
 ---
 
@@ -207,12 +203,7 @@ const verification = security.verifyIntegrity(record, ehrKeys.publicKey);
 
 // 3. Compute cybersecurity risk score
 const risk = security.calculateRiskScore(verification);
-
-// 4. Generate AI explanation and clinical response recommendation
-const aiAnalysis = await security.analyzeSecurityRisk({ verification, risk });
-console.log(aiAnalysis.severity);       // 'LOW' | 'CRITICAL'
-console.log(aiAnalysis.explanation);    // Plain-language clinical explanation
-console.log(aiAnalysis.recommendation); // Actionable clinical/security next step
+console.log(risk.level); // 'LOW' | 'CRITICAL'
 ```
 
 ### For Frontend Teammates (Browser / PWA / Offline)
@@ -242,18 +233,17 @@ if (result.valid) {
 
 ---
 
-## 13. Automated Test Coverage (149 Tests across 10 Suites)
+## 13. Automated Test Coverage (136 Tests across 9 Suites)
 
 1. **`tests/demo.test.js`** (7 tests): Judge presentation scenarios (Genuine card -> VALID, Tampered medication -> INVALID, Fake card -> UNTRUSTED, Expired card -> EXPIRED, EHR offline -> VALID, Allergy erasure -> INVALID).
 2. **`tests/ninety-attacks-lab.test.js`** (68 tests): Complete 90-point attack lab evaluating Critical, High, and Medium priority threat vectors with machine-readable ledger export (`attack-lab-report.json`).
 3. **`tests/crypto.test.js`** (15 tests): RFC 8785 deterministic canonicalization, SHA-256 avalanche effect, constant-time verification, Ed25519 keypair generation, digital signing, and tamper detection.
 4. **`tests/provenance.test.js`** (10 tests): Provenance envelope construction, source validation, audit transformation tracking, and origin spoofing detection.
 5. **`tests/risk.test.js`** (9 tests): Deterministic risk scoring, compounding threat calculations, score boundary mapping, and explainability.
-6. **`tests/ai.test.js`** (8 tests): AI explanation formatting, prompt isolation, and seamless fallback when no API key is present.
-7. **`tests/downtime.test.js`** (9 tests): DOWNTIME-PASS safety card generation, allergy tamper detection, medication alteration detection, and expiry checking.
-8. **`tests/offline.test.js`** (6 tests): URL-safe Base64 QR encoding, QR decoding, and zero-network client verification.
-9. **`tests/attacks.test.js`** (8 tests): Explicit test suite covering Attack Vectors A through G.
-10. **`tests/penetration.test.js`** (9 tests): Advanced penetration-style validation (Prototype Pollution, Recursion Depth Bombs, Oversized QR Memory Bombs, Hex Casing, Signature Anti-Malleability, Asymmetric Key Confusion, Null-Byte Injections, Offline Allergy Erasure).
+6. **`tests/downtime.test.js`** (9 tests): DOWNTIME-PASS safety card generation, allergy tamper detection, medication alteration detection, and expiry checking.
+7. **`tests/offline.test.js`** (6 tests): URL-safe Base64 QR encoding, QR decoding, and zero-network client verification.
+8. **`tests/attacks.test.js`** (8 tests): Explicit test suite covering Attack Vectors A through G.
+9. **`tests/penetration.test.js`** (9 tests): Advanced penetration-style validation (Prototype Pollution, Recursion Depth Bombs, Oversized QR Memory Bombs, Hex Casing, Signature Anti-Malleability, Asymmetric Key Confusion, Null-Byte Injections, Offline Allergy Erasure).
 
 ---
 
