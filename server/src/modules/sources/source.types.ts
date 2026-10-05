@@ -1,7 +1,7 @@
 export const sourceRoles = ['SOURCE', 'TRANSFORMER', 'CONSUMER'] as const;
 export type SourceRole = (typeof sourceRoles)[number];
 
-export const sourceTypes = ['EHR', 'LAB', 'PHARMACY', 'INTEGRATION', 'AI'] as const;
+export const sourceTypes = ['EHR', 'LAB', 'PHARMACY', 'INTEGRATION', 'CONSUMER'] as const;
 export type SourceType = (typeof sourceTypes)[number];
 
 export const sourceStatuses = ['ACTIVE', 'SUSPENDED', 'REVOKED'] as const;

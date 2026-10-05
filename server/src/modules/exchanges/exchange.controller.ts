@@ -1,9 +1,11 @@
 import type { Request, Response } from 'express';
 import {
   ExchangeNotFoundError,
+  ExchangeReviewError,
   getExchangeRecord,
   listExchangeRecords,
   processExchange,
+  reviewExchange,
 } from './exchange.service.js';
 import type { CreateExchangeInput } from './exchange.schema.js';
 import type { ExchangeRecord } from './exchange.types.js';
@@ -38,6 +40,23 @@ export async function getExchangeController(req: Request, res: Response): Promis
   }
 }
 
+export async function reviewExchangeController(req: Request, res: Response): Promise<void> {
+  try {
+    const transactionId = Array.isArray(req.params.transactionId)
+      ? (req.params.transactionId[0] ?? '')
+      : (req.params.transactionId ?? '');
+    const exchange = await reviewExchange(
+      transactionId,
+      req.body.action,
+      req.body.reviewerId,
+      req.body.reason,
+    );
+    res.json({ success: true, data: serializeExchange(exchange) });
+  } catch (error: unknown) {
+    sendExchangeError(error, res);
+  }
+}
+
 function serializeExchange(exchange: ExchangeRecord) {
   return {
     transactionId: exchange.transactionId,
@@ -52,6 +71,12 @@ function serializeExchange(exchange: ExchangeRecord) {
     payloadHash: exchange.payloadHash,
     provenance: exchange.provenance,
     verification: exchange.verification,
+    resourceRisk: exchange.resourceRisk,
+    securityAssessment: exchange.securityAssessment,
+    trustScore: exchange.trustScore,
+    riskLevel: exchange.riskLevel,
+    reviewer: exchange.reviewer,
+    trustPassId: exchange.trustPassId,
     signature: exchange.signature,
     createdAt: exchange.createdAt,
     updatedAt: exchange.updatedAt,
@@ -59,7 +84,7 @@ function serializeExchange(exchange: ExchangeRecord) {
 }
 
 function sendExchangeError(error: unknown, res: Response): void {
-  if (error instanceof ExchangeNotFoundError) {
+  if (error instanceof ExchangeNotFoundError || error instanceof ExchangeReviewError) {
     res.status(error.statusCode).json({
       success: false,
       error: { code: error.code, message: error.message },

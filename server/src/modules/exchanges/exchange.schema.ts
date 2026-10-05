@@ -70,4 +70,14 @@ export const listExchangesSchema = z.object({
   query: z.object({}),
 });
 
+export const exchangeDecisionSchema = z.object({
+  body: z.object({
+    action: z.enum(['APPROVE', 'REJECT']),
+    reviewerId: identifier,
+    reason: z.string().trim().min(1).max(1000),
+  }),
+  params: z.object({ transactionId: identifier }),
+  query: z.object({}),
+});
+
 export type CreateExchangeInput = z.infer<typeof exchangeEnvelopeSchema>;

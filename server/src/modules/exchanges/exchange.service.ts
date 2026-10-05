@@ -1,7 +1,14 @@
 import { env } from '../../config/env.js';
+import { isDatabaseConnected } from '../../database/connection.js';
 import { sha256 } from '../crypto/hash.js';
 import { verify } from '../crypto/signature.js';
+import { analyzeSecurityEvidence } from '../trust/security-analyzer.js';
+import { validateContext } from '../context/context.service.js';
+import { systemAudit } from '../audit/audit.service.js';
 import { validateProvenance } from '../provenance/provenance.service.js';
+import { calculateTrustScore, evaluatePolicy, HARD_FAILURE_CODES } from '../trust/trust.engine.js';
+import { resourceRisk } from '../trust/trust.types.js';
+import { issueTrustPass } from '../trust-pass/trust-pass.service.js';
 import type { SourceDocument } from '../sources/source.model.js';
 import { getSourceById } from '../sources/source.service.js';
 import {
@@ -10,14 +17,16 @@ import {
   findExchanges,
   findLatestSequenceBySource,
   insertExchange,
+  updateExchange,
 } from './exchange.repository.js';
 import type { CreateExchangeInput } from './exchange.schema.js';
 import type {
   ExchangeEnvelope,
   ExchangeRecord,
+  DecisionResult,
   SignableExchange,
   VerificationChecks,
-  VerificationResult,
+  ReviewerRecord,
 } from './exchange.types.js';
 
 export function getSignableExchange(exchange: ExchangeEnvelope): SignableExchange {
@@ -34,10 +43,30 @@ export async function processExchange(input: CreateExchangeInput): Promise<Excha
     return buildRecord(input, withReplayDetected(verification));
   }
 
-  const record = buildRecord(input, verification);
+  let record = buildRecord(input, verification);
 
   try {
-    return await insertExchange(record);
+    record = await insertExchange(record);
+    if (verification.decision === 'ALLOW' && isDatabaseConnected()) {
+      const pass = await issueTrustPass(record);
+      const updated = await updateExchange(record.transactionId, { trustPassId: pass.passId });
+      record = updated ?? { ...record, trustPassId: pass.passId };
+      await systemAudit(record.transactionId, 'TRUST_PASS_ISSUED', [], 'ALLOW', record.payloadHash);
+    }
+    if (isDatabaseConnected()) {
+      await systemAudit(
+        record.transactionId,
+        verification.decision === 'ALLOW'
+          ? 'EXCHANGE_VERIFIED'
+          : verification.decision === 'REVIEW'
+            ? 'REVIEW_REQUESTED'
+            : 'EXCHANGE_QUARANTINED',
+        verification.reasonCodes,
+        verification.decision,
+        record.payloadHash,
+      );
+    }
+    return record;
   } catch (error: unknown) {
     if (isDuplicateKeyError(error)) {
       return buildRecord(input, withReplayDetected(verification));
@@ -58,6 +87,70 @@ export async function getExchangeRecord(transactionId: string): Promise<Exchange
   return exchange;
 }
 
+export async function reviewExchange(
+  transactionId: string,
+  action: 'APPROVE' | 'REJECT',
+  reviewerId: string,
+  reason: string,
+): Promise<ExchangeRecord> {
+  const exchange = await getExchangeRecord(transactionId);
+  if (exchange.verification.decision !== 'REVIEW')
+    throw new ExchangeReviewError(
+      'EXCHANGE_NOT_REVIEWABLE',
+      'Only REVIEW exchanges may be decided',
+    );
+  const hardFailure = exchange.verification.reasonCodes.some((code) =>
+    HARD_FAILURE_CODES.includes(code as never),
+  );
+  if (action === 'APPROVE' && hardFailure)
+    throw new ExchangeReviewError(
+      'HARD_FAILURE_REVIEW_DENIED',
+      'Hard security failures cannot be approved',
+    );
+  const reviewer: ReviewerRecord = {
+    reviewerId,
+    action,
+    reason,
+    reviewedAt: new Date().toISOString(),
+  };
+  const verification = {
+    ...exchange.verification,
+    decision: action === 'APPROVE' ? ('ALLOW' as const) : ('QUARANTINE' as const),
+  };
+  const updated = await updateExchange(transactionId, { verification, reviewer });
+  if (!updated) throw new ExchangeNotFoundError();
+  let result: ExchangeRecord = updated;
+  if (action === 'APPROVE') {
+    const pass = await issueTrustPass(updated);
+    const withPass = await updateExchange(transactionId, { trustPassId: pass.passId });
+    result = withPass ?? { ...updated, trustPassId: pass.passId };
+    await systemAudit(transactionId, 'HUMAN_APPROVED', [], 'ALLOW', result.payloadHash);
+    await systemAudit(transactionId, 'TRUST_PASS_ISSUED', [], 'ALLOW', result.payloadHash);
+  } else {
+    await systemAudit(
+      transactionId,
+      'HUMAN_REJECTED',
+      ['POLICY_DENIED'],
+      'QUARANTINE',
+      result.payloadHash,
+    );
+  }
+  return result;
+}
+
+export class ExchangeReviewError extends Error {
+  public readonly code: 'EXCHANGE_NOT_REVIEWABLE' | 'HARD_FAILURE_REVIEW_DENIED';
+  public readonly statusCode = 409;
+  public constructor(
+    code: 'EXCHANGE_NOT_REVIEWABLE' | 'HARD_FAILURE_REVIEW_DENIED',
+    message: string,
+  ) {
+    super(message);
+    this.name = 'ExchangeReviewError';
+    this.code = code;
+  }
+}
+
 export class ExchangeNotFoundError extends Error {
   public readonly code = 'EXCHANGE_NOT_FOUND';
   public readonly statusCode = 404;
@@ -71,7 +164,7 @@ export class ExchangeNotFoundError extends Error {
 async function verifyExchange(
   input: CreateExchangeInput,
   transactionUnique: boolean,
-): Promise<VerificationResult> {
+): Promise<DecisionResult> {
   const checks: VerificationChecks = {
     schemaValid: true,
     sourceKnown: false,
@@ -85,6 +178,7 @@ async function verifyExchange(
     replayValid: false,
     freshnessValid: false,
     provenanceValid: false,
+    contextValid: false,
   };
   const reasonCodes: string[] = [];
   let source: SourceDocument | null = null;
@@ -167,30 +261,26 @@ async function verifyExchange(
     }
   }
 
-  const hardFailure = reasonCodes.some((code) =>
-    [
-      'UNKNOWN_SOURCE',
-      'UNKNOWN_KEY',
-      'HASH_MISMATCH',
-      'INVALID_SIGNATURE',
-      'REVOKED_SOURCE',
-      'REPLAY_DETECTED',
-      'EXPIRED_MESSAGE',
-      'FUTURE_MESSAGE',
-      'MESSAGE_TTL_EXCEEDED',
-      'PROVENANCE_FAILURE',
-      'UNKNOWN_ORIGIN_SOURCE',
-      'UNKNOWN_TRANSFORMATION_ACTOR',
-      'INVALID_TRANSFORMATION_ACTOR_ROLE',
-      'UNAUTHORIZED_TRANSFORMATION',
-      'PROVENANCE_HASH_MISMATCH',
-    ].includes(code),
-  );
-  const decision = hardFailure
-    ? 'QUARANTINE'
-    : reasonCodes.includes('SOURCE_SUSPENDED')
-      ? 'REVIEW'
-      : 'ALLOW';
+  if (cryptographicValid) {
+    const context = validateContext(input);
+    checks.contextValid = context.valid;
+    for (const reasonCode of context.reasonCodes) addReason(reasonCodes, reasonCode);
+  }
+  const selectedResourceRisk = resourceRisk[input.resourceType] ?? 'HIGH';
+  const securityAssessment = analyzeSecurityEvidence({
+    checks,
+    reasonCodes,
+    resourceRisk: selectedResourceRisk,
+  });
+  const trust = calculateTrustScore({ checks, securityAssessment });
+  const policy = evaluatePolicy({
+    checks,
+    securityAssessment,
+    score: trust.score,
+    reasonCodes,
+    resourceRisk: selectedResourceRisk,
+  });
+  const decision = policy.decision;
 
   return {
     decision,
@@ -200,6 +290,10 @@ async function verifyExchange(
     keyId: input.source.keyId,
     payloadHash: input.payloadHash,
     verifiedAt: new Date().toISOString(),
+    resourceRisk: selectedResourceRisk,
+    securityAssessment,
+    trustScore: trust.score,
+    riskLevel: securityAssessment.riskLevel,
   };
 }
 
@@ -225,12 +319,29 @@ function validateFreshness(input: CreateExchangeInput, reasonCodes: string[]): b
   return valid;
 }
 
-function buildRecord(input: CreateExchangeInput, verification: VerificationResult): ExchangeRecord {
+function buildRecord(input: CreateExchangeInput, verification: DecisionResult): ExchangeRecord {
   const now = new Date();
-  return { ...input, verification, createdAt: now, updatedAt: now };
+  return {
+    ...input,
+    verification: {
+      decision: verification.decision,
+      reasonCodes: verification.reasonCodes,
+      checks: verification.checks,
+      sourceId: verification.sourceId,
+      keyId: verification.keyId,
+      payloadHash: verification.payloadHash,
+      verifiedAt: verification.verifiedAt,
+    },
+    resourceRisk: verification.resourceRisk,
+    securityAssessment: verification.securityAssessment,
+    trustScore: verification.trustScore,
+    riskLevel: verification.riskLevel,
+    createdAt: now,
+    updatedAt: now,
+  };
 }
 
-function withReplayDetected(verification: VerificationResult): VerificationResult {
+function withReplayDetected(verification: DecisionResult): DecisionResult {
   const reasonCodes = [...verification.reasonCodes];
   addReason(reasonCodes, 'REPLAY_DETECTED');
   return {

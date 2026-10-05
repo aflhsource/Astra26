@@ -13,8 +13,6 @@ const envSchema = z.object({
   GATEWAY_KEY_ID: z.string().min(1).default('trust-pass-gateway-key-1'),
   GATEWAY_PRIVATE_KEY_PATH: z.string().min(1).default('.demo-keys/gateway-private.pem'),
   GATEWAY_PUBLIC_KEY_PATH: z.string().min(1).default('.demo-keys/gateway-public.pem'),
-  AI_PROVIDER: z.string().default('local'),
-  AI_MODEL_VERSION: z.string().default('TP-LOCAL-RISK-1.0'),
 });
 
 export const env = envSchema.parse(process.env);

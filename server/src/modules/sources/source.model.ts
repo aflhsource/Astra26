@@ -22,7 +22,7 @@ const sourceSchema = new Schema<SourceRecord>(
     type: {
       type: String,
       required: true,
-      enum: ['EHR', 'LAB', 'PHARMACY', 'INTEGRATION', 'AI'] satisfies SourceType[],
+      enum: ['EHR', 'LAB', 'PHARMACY', 'INTEGRATION', 'CONSUMER'] satisfies SourceType[],
     },
     status: {
       type: String,

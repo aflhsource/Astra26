@@ -32,9 +32,9 @@ const demoKeys: DemoKeyDefinition[] = [
     publicFile: 'integration-a-public.pem',
   },
   {
-    name: 'CLINICAL-AI',
-    privateFile: 'clinical-ai-private.pem',
-    publicFile: 'clinical-ai-public.pem',
+    name: 'CLINICAL-CONSUMER',
+    privateFile: 'clinical-consumer-private.pem',
+    publicFile: 'clinical-consumer-public.pem',
   },
 ];
 

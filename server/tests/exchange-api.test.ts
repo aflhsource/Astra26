@@ -35,7 +35,7 @@ describe('exchange API', () => {
         patientRef: 'PAT-1001',
         encounterRef: 'ENC-1001',
         purpose: 'clinical-decision-support',
-        audience: 'CLINICAL-AI',
+        audience: 'CLINICAL-CONSUMER',
       },
       payload: {
         resourceType: 'Observation',
@@ -86,7 +86,7 @@ describe('exchange API', () => {
           patientRef: 'PAT-1001',
           encounterRef: 'ENC-1001',
           purpose: 'clinical-decision-support',
-          audience: 'CLINICAL-AI',
+          audience: 'CLINICAL-CONSUMER',
         },
         payload: {
           resourceType: 'Observation',
