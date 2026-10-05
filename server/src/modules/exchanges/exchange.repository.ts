@@ -35,6 +35,17 @@ export async function insertExchange(record: ExchangeRecord): Promise<ExchangeDo
   return ExchangeModel.create(record);
 }
 
+export async function updateExchange(
+  transactionId: string,
+  update: Partial<ExchangeRecord>,
+): Promise<ExchangeDocument | null> {
+  return ExchangeModel.findOneAndUpdate(
+    { transactionId },
+    { $set: update },
+    { returnDocument: 'after' },
+  ).exec();
+}
+
 export async function findExchanges(): Promise<ExchangeDocument[]> {
   return ExchangeModel.find().sort({ createdAt: -1 }).exec();
 }

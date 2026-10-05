@@ -67,7 +67,7 @@ const exchangeWithoutSignature: Omit<ExchangeEnvelope, 'signature'> = {
     patientRef: 'PATIENT-001',
     encounterRef: 'ENC-001',
     purpose: 'clinical-decision-support',
-    audience: 'CLINICAL-AI',
+    audience: 'CLINICAL-CONSUMER',
   },
   payload: finalPayload,
   issuedAt,

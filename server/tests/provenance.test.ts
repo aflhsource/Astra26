@@ -20,7 +20,7 @@ const labSource = {
   allowedTransformations: [],
 } as unknown as SourceDocument;
 const consumerSource = {
-  sourceId: 'CLINICAL-AI',
+  sourceId: 'CLINICAL-CONSUMER',
   role: 'CONSUMER',
   status: 'ACTIVE',
   allowedTransformations: [],
@@ -64,7 +64,7 @@ describe('provenance validation', () => {
     sources.getSourceById.mockImplementation(async (sourceId: string) => {
       if (sourceId === 'LAB-A') return labSource;
       if (sourceId === 'INTEGRATION-A') return integrationSource;
-      if (sourceId === 'CLINICAL-AI') return consumerSource;
+      if (sourceId === 'CLINICAL-CONSUMER') return consumerSource;
       throw { code: 'SOURCE_NOT_FOUND' };
     });
   });
@@ -104,7 +104,7 @@ describe('provenance validation', () => {
     );
 
     const consumer = validChain();
-    consumer.transformations[0]!.actorId = 'CLINICAL-AI';
+    consumer.transformations[0]!.actorId = 'CLINICAL-CONSUMER';
     const consumerResult = await validateProvenance(consumer, hash3);
     expect(consumerResult.reasonCodes).toEqual(
       expect.arrayContaining(['INVALID_TRANSFORMATION_ACTOR_ROLE', 'PROVENANCE_FAILURE']),

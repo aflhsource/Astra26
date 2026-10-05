@@ -52,7 +52,7 @@ function makeExchange(overrides: Partial<CreateExchangeInput> = {}): CreateExcha
       patientRef: 'PAT-1001',
       encounterRef: 'ENC-1001',
       purpose: 'clinical-decision-support',
-      audience: 'CLINICAL-AI',
+      audience: 'CLINICAL-CONSUMER',
     },
     payload,
     issuedAt: new Date(now - 1_000).toISOString(),
@@ -101,6 +101,7 @@ describe('exchange verification pipeline', () => {
       replayValid: true,
       freshnessValid: true,
       provenanceValid: true,
+      contextValid: true,
     });
   });
 

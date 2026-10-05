@@ -10,6 +10,9 @@ export type ResourceType = (typeof resourceTypes)[number];
 export const exchangeDecisions = ['ALLOW', 'REVIEW', 'QUARANTINE'] as const;
 export type ExchangeDecision = (typeof exchangeDecisions)[number];
 
+export const riskLevels = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'] as const;
+export type RiskLevel = (typeof riskLevels)[number];
+
 export interface ExchangeSource {
   sourceId: string;
   keyId: string;
@@ -73,6 +76,23 @@ export interface VerificationChecks {
   replayValid: boolean;
   freshnessValid: boolean;
   provenanceValid: boolean;
+  contextValid: boolean;
+}
+
+export interface SecurityAssessment {
+  riskLevel: RiskLevel;
+  anomalyScore: number;
+  probability: number;
+  confidence: number;
+  findings: string[];
+  recommendation: 'ALLOW' | 'REVIEW' | 'QUARANTINE';
+}
+
+export interface ReviewerRecord {
+  reviewerId: string;
+  action: 'APPROVE' | 'REJECT';
+  reason: string;
+  reviewedAt: string;
 }
 
 export interface VerificationResult {
@@ -85,8 +105,21 @@ export interface VerificationResult {
   verifiedAt: string;
 }
 
+export interface DecisionResult extends VerificationResult {
+  resourceRisk: RiskLevel;
+  securityAssessment: SecurityAssessment;
+  trustScore: number;
+  riskLevel: RiskLevel;
+}
+
 export interface ExchangeRecord extends ExchangeEnvelope {
   verification: VerificationResult;
+  resourceRisk: RiskLevel;
+  securityAssessment: SecurityAssessment;
+  trustScore: number;
+  riskLevel: RiskLevel;
+  reviewer?: ReviewerRecord;
+  trustPassId?: string;
   createdAt: Date;
   updatedAt: Date;
 }
