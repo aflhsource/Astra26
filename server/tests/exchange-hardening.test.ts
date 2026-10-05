@@ -6,6 +6,16 @@ describe('exchange replay-protection indexes', () => {
     const indexes = ExchangeModel.schema.indexes();
 
     expect(indexes).toContainEqual([{ transactionId: 1 }, { unique: true }]);
-    expect(indexes).toContainEqual([{ nonce: 1, 'source.sourceId': 1 }, { unique: true }]);
+    expect(indexes).toContainEqual([
+      { nonce: 1, 'source.sourceId': 1 },
+      {
+        name: 'source_nonce_unique_valid_crypto',
+        unique: true,
+        partialFilterExpression: {
+          'verification.checks.hashValid': true,
+          'verification.checks.signatureValid': true,
+        },
+      },
+    ]);
   });
 });

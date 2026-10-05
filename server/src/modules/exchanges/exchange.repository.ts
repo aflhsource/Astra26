@@ -11,13 +11,22 @@ export async function findExchangeBySourceAndNonce(
   sourceId: string,
   nonce: string,
 ): Promise<ExchangeDocument | null> {
-  return ExchangeModel.findOne({ 'source.sourceId': sourceId, nonce }).exec();
+  return ExchangeModel.findOne({
+    'source.sourceId': sourceId,
+    nonce,
+    'verification.checks.hashValid': true,
+    'verification.checks.signatureValid': true,
+  }).exec();
 }
 
 export async function findLatestSequenceBySource(
   sourceId: string,
 ): Promise<ExchangeDocument | null> {
-  return ExchangeModel.findOne({ 'source.sourceId': sourceId })
+  return ExchangeModel.findOne({
+    'source.sourceId': sourceId,
+    'verification.checks.hashValid': true,
+    'verification.checks.signatureValid': true,
+  })
     .sort({ sequence: -1, createdAt: -1 })
     .exec();
 }

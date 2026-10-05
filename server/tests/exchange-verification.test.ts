@@ -100,6 +100,7 @@ describe('exchange verification pipeline', () => {
       sequenceValid: true,
       replayValid: true,
       freshnessValid: true,
+      provenanceValid: true,
     });
   });
 

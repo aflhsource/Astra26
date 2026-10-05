@@ -72,6 +72,7 @@ export interface VerificationChecks {
   sequenceValid: boolean;
   replayValid: boolean;
   freshnessValid: boolean;
+  provenanceValid: boolean;
 }
 
 export interface VerificationResult {
