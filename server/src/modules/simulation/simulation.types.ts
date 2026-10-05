@@ -17,4 +17,8 @@ export interface DemoScenarioResult {
   scenario: DemoScenario;
   exchange: ExchangeRecord;
   attempts?: ExchangeRecord[];
+  evidence: {
+    expected: string;
+    received: string;
+  };
 }

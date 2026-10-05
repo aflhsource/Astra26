@@ -14,9 +14,48 @@ export async function runDemoScenario(scenario: DemoScenario): Promise<DemoScena
   if (scenario === 'replay') {
     const first = await processExchange(exchange);
     const second = await processExchange(exchange);
-    return { scenario, exchange: second, attempts: [first, second] };
+    return {
+      scenario,
+      exchange: second,
+      attempts: [first, second],
+      evidence: getScenarioEvidence(scenario),
+    };
   }
-  return { scenario, exchange: await processExchange(exchange) };
+  return {
+    scenario,
+    exchange: await processExchange(exchange),
+    evidence: getScenarioEvidence(scenario),
+  };
+}
+
+function getScenarioEvidence(scenario: DemoScenario): DemoScenarioResult['evidence'] {
+  switch (scenario) {
+    case 'clean':
+      return {
+        expected: 'Morphine · 9 mL · IV · Aspirin 81 mg',
+        received: 'Morphine · 9 mL · IV · Aspirin 81 mg',
+      };
+    case 'valid-transformation':
+      return { expected: 'Glucose · 6.66 mmol/L', received: 'Glucose · 6.66 mmol/L' };
+    case 'tamper':
+      return {
+        expected: 'Morphine · 9 mL · IV · Aspirin 81 mg',
+        received: 'Morphine · 90 mL · IV · Aspirin 81 mg',
+      };
+    case 'replay':
+      return { expected: 'One accepted transaction', received: 'Same transaction submitted twice' };
+    case 'expired':
+      return {
+        expected: 'Message inside validity window',
+        received: 'Message expired before arrival',
+      };
+    case 'unknown-source':
+      return { expected: 'Registered source LAB-A', received: 'UNKNOWN-UNREGISTERED' };
+    case 'unauthorized-transformation':
+      return { expected: 'NORMALIZE_UNIT', received: 'DELETE_DIAGNOSTIC_VALUE' };
+    case 'context-mismatch':
+      return { expected: 'PATIENT-001 · ENC-001', received: 'PATIENT-999 · ENC-001' };
+  }
 }
 
 function createScenarioExchange(scenario: DemoScenario): ExchangeEnvelope {

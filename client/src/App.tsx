@@ -18,6 +18,7 @@ import {
   ShieldCheck,
   ShieldX,
   SlidersHorizontal,
+  Sparkles,
   UserRoundCheck,
   X,
   Zap,
@@ -41,6 +42,7 @@ type Page =
   | "Security Events"
   | "Demo Lab"
   | "Human Review"
+  | "AI Review"
   | "Trust Pass"
   | "DOWNTIME-PASS";
 type Tone = "allow" | "review" | "quarantine" | "info" | "neutral";
@@ -51,6 +53,7 @@ const nav: { label: Page; icon: typeof LayoutDashboard }[] = [
   { label: "Security Events", icon: Bell },
   { label: "Demo Lab", icon: Zap },
   { label: "Human Review", icon: UserRoundCheck },
+  { label: "AI Review", icon: Sparkles },
   { label: "Trust Pass", icon: BadgeCheck },
   { label: "DOWNTIME-PASS", icon: ScanLine },
 ];
@@ -740,6 +743,16 @@ function DemoLab({
                   <p>{reasonExplanation(exchange)}</p>
                 </div>
               )}
+              <div className="comparison-grid">
+                <div>
+                  <span className="eyebrow">Expected value</span>
+                  <b>{result.evidence.expected}</b>
+                </div>
+                <div>
+                  <span className="eyebrow">Received value</span>
+                  <b>{result.evidence.received}</b>
+                </div>
+              </div>
               {downstream && (
                 <div
                   className={`downstream-result ${downstream.allowed ? "downstream-allowed" : "downstream-blocked"}`}
@@ -973,6 +986,29 @@ function Downtime() {
     </>
   );
 }
+function AIReview() {
+  return (
+    <>
+      <Header
+        eyebrow="Advisory Layer"
+        title="AI Review"
+        description="A future advisory view for structured security evidence."
+      />
+      <section className="panel ai-review-page">
+        <div className="coming-soon-panel">
+          <div>
+            <span className="eyebrow">AI Review</span>
+            <b>Coming soon</b>
+          </div>
+          <span>
+            This layer will summarize backend security evidence without making
+            trust decisions.
+          </span>
+        </div>
+      </section>
+    </>
+  );
+}
 function App() {
   const [page, setPage] = useState<Page>("Overview");
   const [open, setOpen] = useState(false);
@@ -994,6 +1030,8 @@ function App() {
       <DemoLab selected={selected} setSelected={setSelected} />
     ) : page === "Human Review" ? (
       <Review />
+    ) : page === "AI Review" ? (
+      <AIReview />
     ) : page === "Trust Pass" ? (
       <Pass />
     ) : page === "DOWNTIME-PASS" ? (

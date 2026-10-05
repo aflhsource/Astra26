@@ -35,6 +35,10 @@ export interface DemoRunResult {
   scenario: DemoScenario;
   exchange: DemoExchange;
   attempts?: DemoExchange[];
+  evidence: {
+    expected: string;
+    received: string;
+  };
 }
 
 export interface DashboardSummary {
