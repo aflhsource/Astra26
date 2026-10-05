@@ -16,7 +16,12 @@ export interface DemoExchange {
   source: { sourceId: string };
   resourceType: string;
   payload: unknown;
-  context: { audience: string; purpose: string };
+  context: {
+    patientRef: string;
+    encounterRef: string;
+    audience: string;
+    purpose: string;
+  };
   verification: {
     decision: "ALLOW" | "REVIEW" | "QUARANTINE";
     reasonCodes: string[];

@@ -24,11 +24,22 @@ function createScenarioExchange(scenario: DemoScenario): ExchangeEnvelope {
   const sequence = now;
   const issuedAt = new Date(now).toISOString();
   const expiresAt = new Date(now + 300_000).toISOString();
+  const medicationScenario = scenario === 'clean' || scenario === 'tamper';
+  const resourceType = medicationScenario ? 'MedicationRequest' : 'Observation';
   const originPayload: ExchangePayload = {
-    resourceType: 'Observation',
+    resourceType,
     patientRef: 'PATIENT-001',
     encounterRef: 'ENC-001',
-    data: { test: 'Glucose', value: 120, unit: 'mg/dL' },
+    data: medicationScenario
+      ? {
+          medication: 'Morphine',
+          dose: '9 mL',
+          route: 'IV',
+          adjunctMedication: 'Aspirin',
+          adjunctDose: '81 mg',
+          status: 'active',
+        }
+      : { test: 'Glucose', value: 120, unit: 'mg/dL' },
   };
   const transformedPayload: ExchangePayload = {
     ...originPayload,
@@ -56,7 +67,7 @@ function createScenarioExchange(scenario: DemoScenario): ExchangeEnvelope {
   const unsigned: Omit<ExchangeEnvelope, 'signature'> = {
     transactionId: `TX-DEMO-${randomUUID()}`,
     source: { sourceId, keyId: 'lab-a-key-1' },
-    resourceType: 'Observation',
+    resourceType: resourceType as ExchangeEnvelope['resourceType'],
     context: {
       patientRef: contextPatient,
       encounterRef: 'ENC-001',
@@ -79,7 +90,10 @@ function createScenarioExchange(scenario: DemoScenario): ExchangeEnvelope {
   const signed = sign(getSignableExchange({ ...unsigned, signature: '' }), privateKey);
   const exchange: ExchangeEnvelope = { ...unsigned, signature: signed };
   if (scenario === 'tamper') {
-    exchange.payload = { ...exchange.payload, data: { ...exchange.payload.data, value: 999 } };
+    exchange.payload = {
+      ...exchange.payload,
+      data: { ...exchange.payload.data, dose: '90 mL' },
+    };
   }
   return exchange;
 }

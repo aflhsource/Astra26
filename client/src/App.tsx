@@ -28,6 +28,7 @@ import {
   getExchanges,
   runDemoScenario,
   type DashboardSummary,
+  type DemoExchange,
   type DemoRunResult,
   type DemoScenario,
 } from "./services/demoApi";
@@ -132,6 +133,42 @@ const metricItems: { label: string; icon: typeof Activity }[] = [
 
 function Badge({ tone, children }: { tone: Tone; children: string }) {
   return <span className={`badge badge-${tone}`}>{children}</span>;
+}
+function payloadDescription(exchange: DemoExchange): string {
+  const payload = exchange.payload as { data?: Record<string, unknown> };
+  const data = payload.data ?? {};
+  if (typeof data.medication === "string") {
+    const adjunct = data.adjunctMedication
+      ? ` · ${String(data.adjunctMedication)} ${String(data.adjunctDose ?? "")}`
+      : "";
+    return `${data.medication} · ${String(data.dose ?? "dose unavailable")} · ${String(data.route ?? "route unavailable")}${adjunct}`;
+  }
+  if (typeof data.test === "string") {
+    return `${data.test} · ${String(data.value ?? "value unavailable")} ${String(data.unit ?? "")}`.trim();
+  }
+  return "Synthetic clinical payload";
+}
+function reasonExplanation(exchange: DemoExchange): string {
+  const reason = exchange.verification.reasonCodes[0];
+  const explanations: Record<string, string> = {
+    HASH_MISMATCH:
+      "The received payload no longer matches its declared SHA-256 digest.",
+    INVALID_SIGNATURE:
+      "The signed exchange cannot be verified against the registered source key.",
+    REPLAY_DETECTED:
+      "This transaction, nonce or sequence has already been processed.",
+    EXPIRED_MESSAGE: "The exchange arrived outside its signed validity window.",
+    UNKNOWN_SOURCE:
+      "The sender is not registered in the TRUST-PASS source registry.",
+    UNAUTHORIZED_TRANSFORMATION:
+      "The registered transformer is not authorized for this operation.",
+    PROVENANCE_FAILURE: "The origin or transformation chain cannot be trusted.",
+    CONTEXT_MISMATCH:
+      "The signed context does not match the patient or encounter in the payload.",
+  };
+  return reason
+    ? (explanations[reason] ?? `Backend reported ${reason}.`)
+    : "All verification gates passed for this exchange.";
 }
 function Header({
   eyebrow,
@@ -638,30 +675,54 @@ function DemoLab({
             </div>
           ) : exchange ? (
             <>
-              <div className="decision">
-                <span className="eyebrow">Decision</span>
-                <b className={`decision-${tone}`}>
-                  {exchange.verification.decision}
-                </b>
-                <small>
-                  {exchange.verification.reasonCodes.join(", ") ||
-                    "No security findings"}
-                </small>
+              <div className="payload-preview">
+                <div>
+                  <span className="eyebrow">Synthetic clinical payload</span>
+                  <b>{payloadDescription(exchange)}</b>
+                </div>
+                <span className="mono">
+                  {exchange.context.patientRef} ·{" "}
+                  {exchange.context.encounterRef}
+                </span>
               </div>
-              <div className="result-stats">
-                <div>
-                  <span>Trust Score</span>
-                  <b>{exchange.trustScore}</b>
+              {!downstream && !downstreamChecking && (
+                <div className="preflight-result">
+                  <CircleDashed size={23} />
+                  <b>Verification complete</b>
+                  <span>
+                    Test downstream to reveal the final decision and enforcement
+                    result.
+                  </span>
                 </div>
-                <div>
-                  <span>Risk</span>
-                  <b>{exchange.riskLevel}</b>
-                </div>
-                <div>
-                  <span>Trust Pass</span>
-                  <b>{exchange.trustPassId ? "ISSUED" : "NOT ISSUED"}</b>
-                </div>
-              </div>
+              )}
+              {downstream && (
+                <>
+                  <div className="decision">
+                    <span className="eyebrow">Decision</span>
+                    <b className={`decision-${tone}`}>
+                      {exchange.verification.decision}
+                    </b>
+                    <small>
+                      {exchange.verification.reasonCodes.join(", ") ||
+                        "No security findings"}
+                    </small>
+                  </div>
+                  <div className="result-stats">
+                    <div>
+                      <span>Trust Score</span>
+                      <b>{exchange.trustScore}</b>
+                    </div>
+                    <div>
+                      <span>Risk</span>
+                      <b>{exchange.riskLevel}</b>
+                    </div>
+                    <div>
+                      <span>Trust Pass</span>
+                      <b>{exchange.trustPassId ? "ISSUED" : "NOT ISSUED"}</b>
+                    </div>
+                  </div>
+                </>
+              )}
               <div className="demo-result-actions">
                 <button className="dark" onClick={() => void testDownstream()}>
                   Test downstream <ArrowUpRight size={15} />
@@ -671,6 +732,12 @@ function DemoLab({
                 <div className="downstream-result downstream-checking">
                   <span className="eyebrow">Downstream consumption</span>
                   <b>Verifying Trust Pass…</b>
+                </div>
+              )}
+              {downstream && (
+                <div className="reason-explanation">
+                  <span className="eyebrow">Why this result</span>
+                  <p>{reasonExplanation(exchange)}</p>
                 </div>
               )}
               {downstream && (
@@ -686,6 +753,16 @@ function DemoLab({
                   <small>{downstream.message}</small>
                 </div>
               )}
+              <div className="coming-soon-panel">
+                <div>
+                  <span className="eyebrow">AI Review</span>
+                  <b>Coming soon</b>
+                </div>
+                <span>
+                  Security evidence review will be added as a separate advisory
+                  layer.
+                </span>
+              </div>
               {result.attempts && (
                 <div className="attempts">
                   <span>Replay attempts</span>
