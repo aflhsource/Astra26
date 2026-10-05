@@ -1,0 +1,20 @@
+{
+  "name": "@trust-pass/security",
+  "version": "1.0.0",
+  "description": "TRUST-PASS and DOWNTIME-PASS Healthcare Security & Cryptographic Verification Layer",
+  "main": "index.js",
+  "scripts": {
+    "test": "node --test tests/*.test.js",
+    "test:local": "./run-tests.sh"
+  },
+  "keywords": [
+    "healthcare",
+    "cybersecurity",
+    "ed25519",
+    "integrity",
+    "provenance",
+    "downtime-pass",
+    "trust-pass"
+  ],
+  "license": "Apache-2.0"
+}
