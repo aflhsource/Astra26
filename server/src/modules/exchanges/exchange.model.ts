@@ -45,6 +45,11 @@ const exchangeSchema = new Schema<ExchangeRecord>(
         hashValid: { type: Boolean, required: true },
         signatureValid: { type: Boolean, required: true },
         sourceActive: { type: Boolean, required: true },
+        transactionUnique: { type: Boolean, required: true },
+        nonceValid: { type: Boolean, required: true },
+        sequenceValid: { type: Boolean, required: true },
+        replayValid: { type: Boolean, required: true },
+        freshnessValid: { type: Boolean, required: true },
       },
       sourceId: { type: String, required: true },
       keyId: { type: String, required: true },
@@ -56,6 +61,7 @@ const exchangeSchema = new Schema<ExchangeRecord>(
 );
 
 exchangeSchema.index({ 'source.sourceId': 1 });
+exchangeSchema.index({ 'source.sourceId': 1, nonce: 1 }, { unique: true });
 exchangeSchema.index({ 'verification.decision': 1 });
 exchangeSchema.index({ createdAt: -1 });
 

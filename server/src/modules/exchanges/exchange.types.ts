@@ -67,6 +67,11 @@ export interface VerificationChecks {
   hashValid: boolean;
   signatureValid: boolean;
   sourceActive: boolean;
+  transactionUnique: boolean;
+  nonceValid: boolean;
+  sequenceValid: boolean;
+  replayValid: boolean;
+  freshnessValid: boolean;
 }
 
 export interface VerificationResult {

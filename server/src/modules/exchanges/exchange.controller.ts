@@ -1,7 +1,6 @@
 import type { Request, Response } from 'express';
 import {
   ExchangeNotFoundError,
-  ExchangeServiceError,
   getExchangeRecord,
   listExchangeRecords,
   processExchange,
@@ -60,14 +59,6 @@ function serializeExchange(exchange: ExchangeRecord) {
 }
 
 function sendExchangeError(error: unknown, res: Response): void {
-  if (error instanceof ExchangeServiceError) {
-    res.status(error.statusCode).json({
-      success: false,
-      error: { code: error.code, message: error.message },
-      requestId: res.locals.requestId,
-    });
-    return;
-  }
   if (error instanceof ExchangeNotFoundError) {
     res.status(error.statusCode).json({
       success: false,

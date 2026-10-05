@@ -7,6 +7,21 @@ export async function findExchangeByTransactionId(
   return ExchangeModel.findOne({ transactionId }).exec();
 }
 
+export async function findExchangeBySourceAndNonce(
+  sourceId: string,
+  nonce: string,
+): Promise<ExchangeDocument | null> {
+  return ExchangeModel.findOne({ 'source.sourceId': sourceId, nonce }).exec();
+}
+
+export async function findLatestSequenceBySource(
+  sourceId: string,
+): Promise<ExchangeDocument | null> {
+  return ExchangeModel.findOne({ 'source.sourceId': sourceId })
+    .sort({ sequence: -1, createdAt: -1 })
+    .exec();
+}
+
 export async function insertExchange(record: ExchangeRecord): Promise<ExchangeDocument> {
   return ExchangeModel.create(record);
 }

@@ -1,17 +1,15 @@
 import { generateEd25519KeyPair, sign } from '../src/modules/crypto/signature.js';
 import { sha256 } from '../src/modules/crypto/hash.js';
-import {
-  ExchangeServiceError,
-  getSignableExchange,
-  processExchange,
-} from '../src/modules/exchanges/exchange.service.js';
+import { getSignableExchange, processExchange } from '../src/modules/exchanges/exchange.service.js';
 import type { CreateExchangeInput } from '../src/modules/exchanges/exchange.schema.js';
 import type { SourceDocument } from '../src/modules/sources/source.model.js';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const repository = vi.hoisted(() => ({
+  findExchangeBySourceAndNonce: vi.fn(),
   findExchangeByTransactionId: vi.fn(),
   findExchanges: vi.fn(),
+  findLatestSequenceBySource: vi.fn(),
   insertExchange: vi.fn(),
 }));
 
@@ -39,6 +37,7 @@ function makeSource(status: 'ACTIVE' | 'SUSPENDED' | 'REVOKED' = 'ACTIVE') {
 }
 
 function makeExchange(overrides: Partial<CreateExchangeInput> = {}): CreateExchangeInput {
+  const now = Date.now();
   const payload = {
     resourceType: 'Observation',
     patientRef: 'PAT-1001',
@@ -56,8 +55,8 @@ function makeExchange(overrides: Partial<CreateExchangeInput> = {}): CreateExcha
       audience: 'CLINICAL-AI',
     },
     payload,
-    issuedAt: '2026-10-05T12:00:00.000Z',
-    expiresAt: '2026-10-05T12:05:00.000Z',
+    issuedAt: new Date(now - 1_000).toISOString(),
+    expiresAt: new Date(now + 299_000).toISOString(),
     sequence: 1,
     nonce: 'nonce-verify-001',
     payloadHash: sha256(payload),
@@ -78,6 +77,8 @@ describe('exchange verification pipeline', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     repository.findExchangeByTransactionId.mockResolvedValue(null);
+    repository.findExchangeBySourceAndNonce.mockResolvedValue(null);
+    repository.findLatestSequenceBySource.mockResolvedValue(null);
     repository.insertExchange.mockImplementation(async (record) => record);
     sources.getSourceById.mockResolvedValue(makeSource());
   });
@@ -94,6 +95,11 @@ describe('exchange verification pipeline', () => {
       hashValid: true,
       signatureValid: true,
       sourceActive: true,
+      transactionUnique: true,
+      nonceValid: true,
+      sequenceValid: true,
+      replayValid: true,
+      freshnessValid: true,
     });
   });
 
@@ -154,9 +160,67 @@ describe('exchange verification pipeline', () => {
   it('rejects duplicate transaction IDs before processing a second exchange', async () => {
     repository.findExchangeByTransactionId.mockResolvedValue({ transactionId: 'TX-DUPLICATE' });
 
-    await expect(
-      processExchange(makeExchange({ transactionId: 'TX-DUPLICATE' })),
-    ).rejects.toBeInstanceOf(ExchangeServiceError);
-    expect(sources.getSourceById).not.toHaveBeenCalled();
+    const result = await processExchange(makeExchange({ transactionId: 'TX-DUPLICATE' }));
+
+    expect(result.verification.decision).toBe('QUARANTINE');
+    expect(result.verification.reasonCodes).toContain('REPLAY_DETECTED');
+    expect(result.verification.checks.transactionUnique).toBe(false);
+  });
+
+  it('quarantines a reused nonce for the same source', async () => {
+    repository.findExchangeBySourceAndNonce.mockResolvedValue({ transactionId: 'TX-OLD' });
+
+    const result = await processExchange(makeExchange({ transactionId: 'TX-NONCE-REPLAY' }));
+
+    expect(result.verification.decision).toBe('QUARANTINE');
+    expect(result.verification.reasonCodes).toContain('REPLAY_DETECTED');
+    expect(result.verification.checks.nonceValid).toBe(false);
+    expect(result.verification.checks.replayValid).toBe(false);
+  });
+
+  it('quarantines a sequence number that is not greater than the latest seen value', async () => {
+    repository.findLatestSequenceBySource.mockResolvedValue({ sequence: 4 });
+
+    const result = await processExchange(makeExchange({ sequence: 4 }));
+
+    expect(result.verification.decision).toBe('QUARANTINE');
+    expect(result.verification.reasonCodes).toContain('REPLAY_DETECTED');
+    expect(result.verification.checks.sequenceValid).toBe(false);
+  });
+
+  it('quarantines expired and future-dated messages', async () => {
+    const expired = await processExchange(
+      makeExchange({
+        transactionId: 'TX-EXPIRED',
+        issuedAt: new Date(Date.now() - 120_000).toISOString(),
+        expiresAt: new Date(Date.now() - 60_000).toISOString(),
+      }),
+    );
+    expect(expired.verification.decision).toBe('QUARANTINE');
+    expect(expired.verification.reasonCodes).toContain('EXPIRED_MESSAGE');
+
+    const future = await processExchange(
+      makeExchange({
+        transactionId: 'TX-FUTURE',
+        issuedAt: new Date(Date.now() + 120_000).toISOString(),
+        expiresAt: new Date(Date.now() + 420_000).toISOString(),
+      }),
+    );
+    expect(future.verification.decision).toBe('QUARANTINE');
+    expect(future.verification.reasonCodes).toContain('FUTURE_MESSAGE');
+  });
+
+  it('quarantines messages whose declared lifetime exceeds the configured maximum', async () => {
+    const result = await processExchange(
+      makeExchange({
+        transactionId: 'TX-TTL-EXCEEDED',
+        issuedAt: new Date(Date.now() - 1_000).toISOString(),
+        expiresAt: new Date(Date.now() + 601_000).toISOString(),
+      }),
+    );
+
+    expect(result.verification.decision).toBe('QUARANTINE');
+    expect(result.verification.reasonCodes).toContain('MESSAGE_TTL_EXCEEDED');
+    expect(result.verification.checks.freshnessValid).toBe(false);
   });
 });

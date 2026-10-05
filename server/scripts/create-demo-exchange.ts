@@ -20,6 +20,10 @@ const sourceDefinition = sourceDefinitions[sourceId];
 if (!sourceDefinition) {
   throw new Error(`Unsupported DEMO_SOURCE_ID: ${sourceId}`);
 }
+const sequence = Number.parseInt(process.env.DEMO_SEQUENCE ?? '1', 10);
+if (!Number.isSafeInteger(sequence) || sequence <= 0) {
+  throw new Error('DEMO_SEQUENCE must be a positive integer');
+}
 const resolvedPrivateKeyPath = resolve(
   process.cwd(),
   `.demo-keys/${sourceDefinition.privateKeyFile}`,
@@ -45,7 +49,7 @@ const exchangeWithoutSignature: Omit<ExchangeEnvelope, 'signature'> = {
   },
   issuedAt,
   expiresAt,
-  sequence: 1,
+  sequence,
   nonce: randomUUID(),
   payloadHash: sha256({
     resourceType: 'Observation',
