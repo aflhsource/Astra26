@@ -26,6 +26,16 @@ const demoKeys: DemoKeyDefinition[] = [
     privateFile: 'gateway-private.pem',
     publicFile: 'gateway-public.pem',
   },
+  {
+    name: 'INTEGRATION-A',
+    privateFile: 'integration-a-private.pem',
+    publicFile: 'integration-a-public.pem',
+  },
+  {
+    name: 'CLINICAL-AI',
+    privateFile: 'clinical-ai-private.pem',
+    publicFile: 'clinical-ai-public.pem',
+  },
 ];
 
 export function generateDemoKeys(outputDirectory = resolve(process.cwd(), '.demo-keys')): void {

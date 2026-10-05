@@ -68,7 +68,7 @@ describe('Ed25519 signatures', () => {
     const keyPair = generateEd25519KeyPair();
     const otherKeyPair = generateEd25519KeyPair();
     const signature = sign(payload, keyPair.privateKey);
-    const mutatedSignature = `${signature.slice(0, -1)}${signature.endsWith('A') ? 'B' : 'A'}`;
+    const mutatedSignature = `${signature.startsWith('A') ? 'B' : 'A'}${signature.slice(1)}`;
 
     expect(verify({ ...payload, transactionId: 'tx-modified' }, signature, keyPair.publicKey)).toBe(
       false,

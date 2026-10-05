@@ -6,6 +6,7 @@ import { isDatabaseConnected } from './database/connection.js';
 import { errorHandler } from './middleware/error-handler.js';
 import { apiRateLimit } from './middleware/rate-limit.js';
 import { requestId } from './middleware/request-id.js';
+import { sourceRoutes } from './modules/sources/source.routes.js';
 
 export function createApp() {
   const app = express();
@@ -16,6 +17,8 @@ export function createApp() {
   app.use(express.json({ limit: env.BODY_LIMIT }));
   app.use(requestId);
   app.use(apiRateLimit);
+
+  app.use('/api/v1/sources', sourceRoutes);
 
   app.get('/api/v1/health', (_req, res) => {
     const database = isDatabaseConnected() ? 'connected' : 'disconnected';
