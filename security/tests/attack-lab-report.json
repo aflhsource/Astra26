@@ -1,6 +1,6 @@
 {
   "title": "ASTRA 2026: 90-Point Security Attack Test Lab Audit Report",
-  "timestamp": "2026-10-05T11:19:33.256Z",
+  "timestamp": "2026-10-05T11:37:44.724Z",
   "summary": {
     "total": 90,
     "passed": 59,
@@ -543,7 +543,7 @@
       "severity": "P1",
       "applicable": true,
       "expected": "High throughput local processing",
-      "actual": "500 iterations completed in 40ms",
+      "actual": "500 iterations completed in 27ms",
       "status": "PASS",
       "explanation": "Lightweight native crypto operations process hundreds of records per second",
       "mitigation": "Optimized native crypto primitives (implemented)"
