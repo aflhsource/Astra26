@@ -4,7 +4,13 @@ import { systemAudit } from '../audit/audit.service.js';
 import { verifyForConsumption } from '../trust-pass/trust-pass.service.js';
 
 export async function consumeDownstreamController(req: Request, res: Response): Promise<void> {
-  const { transactionId, trustPassId, payload, audience, purpose } = req.body as {
+  const {
+    transactionId,
+    trustPassId = '',
+    payload,
+    audience,
+    purpose,
+  } = req.body as {
     transactionId: string;
     trustPassId: string;
     payload: unknown;

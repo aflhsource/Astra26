@@ -11,6 +11,7 @@ import { exchangeRoutes } from './modules/exchanges/exchange.routes.js';
 import { trustPassRoutes } from './modules/trust-pass/trust-pass.routes.js';
 import { downstreamRoutes } from './modules/downstream/downstream.routes.js';
 import { dashboardRoutes } from './modules/dashboard/dashboard.routes.js';
+import { simulationRoutes } from './modules/simulation/simulation.routes.js';
 
 export function createApp() {
   const app = express();
@@ -27,6 +28,7 @@ export function createApp() {
   app.use('/api/v1/trust-passes', trustPassRoutes);
   app.use('/api/v1/downstream', downstreamRoutes);
   app.use('/api/v1/dashboard', dashboardRoutes);
+  app.use('/api/v1/simulation/scenarios', simulationRoutes);
 
   app.get('/api/v1/health', (_req, res) => {
     const database = isDatabaseConnected() ? 'connected' : 'disconnected';
