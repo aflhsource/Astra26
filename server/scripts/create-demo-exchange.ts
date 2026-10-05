@@ -4,7 +4,7 @@ import { resolve } from 'node:path';
 import { sha256 } from '../src/modules/crypto/hash.js';
 import { sign } from '../src/modules/crypto/signature.js';
 import { getSignableExchange } from '../src/modules/exchanges/exchange.service.js';
-import type { ExchangeEnvelope } from '../src/modules/exchanges/exchange.types.js';
+import type { ExchangeEnvelope, ExchangePayload } from '../src/modules/exchanges/exchange.types.js';
 
 const sourceDefinitions: Record<string, { keyId: string; privateKeyFile: string }> = {
   'LAB-A': { keyId: 'lab-a-key-1', privateKeyFile: 'lab-a-private.pem' },
@@ -30,6 +30,34 @@ const resolvedPrivateKeyPath = resolve(
 );
 const issuedAt = new Date().toISOString();
 const expiresAt = new Date(Date.now() + 300_000).toISOString();
+const transformed = process.env.DEMO_TRANSFORMED === '1';
+const originPayload: ExchangePayload = {
+  resourceType: 'Observation',
+  patientRef: 'PATIENT-001',
+  encounterRef: 'ENC-001',
+  data: { test: 'Glucose', value: 120, unit: 'mg/dL' },
+};
+const finalPayload: ExchangePayload = transformed
+  ? {
+      ...originPayload,
+      data: { test: 'Glucose', value: 6.66, unit: 'mmol/L' },
+    }
+  : originPayload;
+const originHash = sha256(originPayload);
+const finalHash = sha256(finalPayload);
+const provenanceScenario = process.env.DEMO_PROVENANCE_SCENARIO;
+const transformations = transformed
+  ? [
+      {
+        actorId: provenanceScenario === 'unknown-actor' ? 'UNKNOWN-A' : 'INTEGRATION-A',
+        operation:
+          provenanceScenario === 'unauthorized' ? 'DELETE_DIAGNOSTIC_VALUE' : 'NORMALIZE_UNIT',
+        inputHash: provenanceScenario === 'broken-hash' ? sha256({ value: 'broken' }) : originHash,
+        outputHash: finalHash,
+        timestamp: issuedAt,
+      },
+    ]
+  : [];
 
 const exchangeWithoutSignature: Omit<ExchangeEnvelope, 'signature'> = {
   transactionId: `TX-DEMO-${randomUUID()}`,
@@ -41,31 +69,16 @@ const exchangeWithoutSignature: Omit<ExchangeEnvelope, 'signature'> = {
     purpose: 'clinical-decision-support',
     audience: 'CLINICAL-AI',
   },
-  payload: {
-    resourceType: 'Observation',
-    patientRef: 'PATIENT-001',
-    encounterRef: 'ENC-001',
-    data: { test: 'Glucose', value: 120, unit: 'mg/dL' },
-  },
+  payload: finalPayload,
   issuedAt,
   expiresAt,
   sequence,
   nonce: randomUUID(),
-  payloadHash: sha256({
-    resourceType: 'Observation',
-    patientRef: 'PATIENT-001',
-    encounterRef: 'ENC-001',
-    data: { test: 'Glucose', value: 120, unit: 'mg/dL' },
-  }),
+  payloadHash: finalHash,
   provenance: {
-    originSourceId: sourceId,
-    originHash: sha256({
-      resourceType: 'Observation',
-      patientRef: 'PATIENT-001',
-      encounterRef: 'ENC-001',
-      data: { test: 'Glucose', value: 120, unit: 'mg/dL' },
-    }),
-    transformations: [],
+    originSourceId: provenanceScenario === 'unknown-origin' ? 'UNKNOWN-ORIGIN' : sourceId,
+    originHash,
+    transformations,
   },
 };
 

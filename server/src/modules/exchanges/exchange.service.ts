@@ -1,6 +1,7 @@
 import { env } from '../../config/env.js';
 import { sha256 } from '../crypto/hash.js';
 import { verify } from '../crypto/signature.js';
+import { validateProvenance } from '../provenance/provenance.service.js';
 import type { SourceDocument } from '../sources/source.model.js';
 import { getSourceById } from '../sources/source.service.js';
 import {
@@ -83,6 +84,7 @@ async function verifyExchange(
     sequenceValid: false,
     replayValid: false,
     freshnessValid: false,
+    provenanceValid: false,
   };
   const reasonCodes: string[] = [];
   let source: SourceDocument | null = null;
@@ -123,7 +125,10 @@ async function verifyExchange(
     addReason(reasonCodes, 'INVALID_SIGNATURE');
   }
 
-  if (source) {
+  const cryptographicValid =
+    checks.sourceKnown && checks.keyKnown && checks.hashValid && checks.signatureValid;
+
+  if (cryptographicValid) {
     const nonceRecord = await findExchangeBySourceAndNonce(input.source.sourceId, input.nonce);
     checks.nonceValid = nonceRecord === null;
     if (!checks.nonceValid) {
@@ -139,7 +144,11 @@ async function verifyExchange(
   }
 
   checks.replayValid =
-    checks.transactionUnique && checks.nonceValid && checks.sequenceValid && checks.sourceKnown;
+    cryptographicValid &&
+    checks.transactionUnique &&
+    checks.nonceValid &&
+    checks.sequenceValid &&
+    checks.sourceKnown;
   checks.freshnessValid = validateFreshness(input, reasonCodes);
 
   if (source?.status === 'REVOKED') {
@@ -148,6 +157,14 @@ async function verifyExchange(
     addReason(reasonCodes, 'SOURCE_SUSPENDED');
   } else if (source?.status === 'ACTIVE') {
     checks.sourceActive = true;
+  }
+
+  if (cryptographicValid) {
+    const provenance = await validateProvenance(input.provenance, input.payloadHash);
+    checks.provenanceValid = provenance.valid;
+    for (const reasonCode of provenance.reasonCodes) {
+      addReason(reasonCodes, reasonCode);
+    }
   }
 
   const hardFailure = reasonCodes.some((code) =>
@@ -161,6 +178,12 @@ async function verifyExchange(
       'EXPIRED_MESSAGE',
       'FUTURE_MESSAGE',
       'MESSAGE_TTL_EXCEEDED',
+      'PROVENANCE_FAILURE',
+      'UNKNOWN_ORIGIN_SOURCE',
+      'UNKNOWN_TRANSFORMATION_ACTOR',
+      'INVALID_TRANSFORMATION_ACTOR_ROLE',
+      'UNAUTHORIZED_TRANSFORMATION',
+      'PROVENANCE_HASH_MISMATCH',
     ].includes(code),
   );
   const decision = hardFailure

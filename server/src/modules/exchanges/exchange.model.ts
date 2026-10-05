@@ -50,6 +50,7 @@ const exchangeSchema = new Schema<ExchangeRecord>(
         sequenceValid: { type: Boolean, required: true },
         replayValid: { type: Boolean, required: true },
         freshnessValid: { type: Boolean, required: true },
+        provenanceValid: { type: Boolean, required: true },
       },
       sourceId: { type: String, required: true },
       keyId: { type: String, required: true },
@@ -61,7 +62,17 @@ const exchangeSchema = new Schema<ExchangeRecord>(
 );
 
 exchangeSchema.index({ 'source.sourceId': 1 });
-exchangeSchema.index({ 'source.sourceId': 1, nonce: 1 }, { unique: true });
+exchangeSchema.index(
+  { 'source.sourceId': 1, nonce: 1 },
+  {
+    name: 'source_nonce_unique_valid_crypto',
+    unique: true,
+    partialFilterExpression: {
+      'verification.checks.hashValid': true,
+      'verification.checks.signatureValid': true,
+    },
+  },
+);
 exchangeSchema.index({ 'verification.decision': 1 });
 exchangeSchema.index({ createdAt: -1 });
 

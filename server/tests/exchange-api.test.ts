@@ -65,6 +65,7 @@ describe('exchange API', () => {
           sequenceValid: true,
           replayValid: true,
           freshnessValid: true,
+          provenanceValid: true,
         },
         sourceId: 'LAB-A',
         keyId: 'lab-a-key-1',
