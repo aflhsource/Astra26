@@ -1,0 +1,22 @@
+# Environment variables & secrets
+.env
+.env.*
+!.env.example
+
+# Cryptographic private keys & sensitive key stores
+*.pem
+*.key
+*.priv
+*.pkcs8
+keys/
+.local/
+private/
+
+# Dependencies
+node_modules/
+
+# Logs & temp files
+*.log
+.DS_Store
+tmp/
+scratch/
