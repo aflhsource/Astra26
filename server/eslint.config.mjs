@@ -13,6 +13,7 @@ export default [
     languageOptions: {
       parser: tsParser,
       globals: {
+        Buffer: 'readonly',
         console: 'readonly',
         process: 'readonly',
       },
